@@ -11,3 +11,5 @@ Then, I learnt to use ggplot to make visualizations of data in boxplot, scatter 
 The fourth assignment didn't need to write codes, but I leant the basic knowledge of probability and different theories and formulas to calculate different probabilities.
 
 I practiced what different probability models were and how to calculate them in HW5. There are several formulas, and those simbols are hard to remember. But as long as I figured out the inside logic, probability becomes more friendly.
+
+I am learning probability recently, and the 6th assignments are all about deciding what type of distribution it is, like Bernoulli, binomial or normal, and using Z or T distribution/index. These concepts are also very basic in stats learning.
