@@ -13,3 +13,5 @@ The fourth assignment didn't need to write codes, but I leant the basic knowledg
 I practiced what different probability models were and how to calculate them in HW5. There are several formulas, and those simbols are hard to remember. But as long as I figured out the inside logic, probability becomes more friendly.
 
 I am learning probability recently, and the 6th assignments are all about deciding what type of distribution it is, like Bernoulli, binomial or normal, and using Z or T distribution/index. These concepts are also very basic in stats learning.
+
+The 7th assignmnet is about null hypothesis and alternate hypothesis, and it asks us to compare the p-value to the significance level and to see whether the evidence is enough for supporting the claim.
