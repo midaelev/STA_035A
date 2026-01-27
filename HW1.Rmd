@@ -1,162 +1,315 @@
 ---
-title: '111'
-author: "Mida"
-date: "`r Sys.Date()`"
-output:
-  pdf_document: default
-  html_document:
-    df_print: paged
+title: 'Homework 1: Tidyverse Warm-up'
+author: "Your Name"
+date: "2026-01-16"
+output: pdf_document
 ---
-```{r}
-
-```
-## HW1-1
-
-```{r}
-x = c(3)
-log(10^x)
-log10(x^10)
-log(exp(x)) # so the answer is this one
-exp(log(x, base = 2))
-```
-##HW1-2
-
-```{r}
-x <- c("1", "3", "5")
-class(x)
-x <- as.integer(x)
-is.integer(x)
-```
-##HW1-3
-
-```{r}
-#install.packages("dslabs")
-library(dslabs)
-class(na_example)
-str(na_example)
-Mean <- mean(na_example) #The result is NA becuase there are na values in na_example
-valid_mean <- mean(na_example[!is.na(na_example)])
-```
-
-
-##HW1-4
-
-```{r}
-tem = c(35,88,42,84,81,30)
-city = c("Beijing","Lagos","Paris","Rio de Janeiro","San Juan", "Toronto")
-names(tem) = city
-
-tem
-
-tem[1:3]
-tem["Paris"]
-tem["San Juan"]
-
-city_temps = data.frame(Name = city, Temperature = tem)
-city_temps
-
-celsius <- (5/9) * (tem - 32)
-celsius
-```
-##HW1-5
-
-
-```{r}
-library(dslabs)
-class(murders)
-dim(murders)
-str(murders) #The answer of the 5.(2) is c
-#View(murders)
-a <- murders$abb
-class(a)
-b <- murders[,"abb"]
-identical(a,b)
-class(murders$region)
-c <- levels(murders$region)
-length(c)
-table(murders$region)
-pop <- murders$population
-pop <- sort(pop)
-pop[1]
-order(murders$population)[1]
-which.min(murders$population)
-murders$state[51]
-```
-##HW1-6
-
-```{r}
-x <- c(1,2,-3,4)
-if (all(x>0)) {
-  print("All positive")
-} else{
-  print("Not all positive")
-}
-```
-##HW1-7
-
-```{r}
-#first question should be d because it has to be all false to make all(!x) false
-x <- 3
-my_func <- function(y){
-  x <- 5
-  y+5
-}
-print(x)
-```
-##HW1-8
-
-```{r}
-compute_s_n <- function(n) {
-  sum <- 0
-  for (i in 1:n) {
-    sum <- sum + i^2
-  }
-  return(sum)
-}
-
-s_n <- vector("numeric", 25)
-for (i in 1:25){
-  s_n[i] <- compute_s_n(i)
-}
-print(s_n)
-
-s_n <- sapply(1:25, compute_s_n)
-print(s_n)
-
-compute_s_n <- function(n) {
-  sum <- 0
-  for (i in 1:n) {
-    sum <- sum + i^2
-  }
-  sum_formula <- n * (n + 1) * (2 * n + 1) / 6
-  return(list(calculate = sum, accurate = sum_formula))
-}
-result <- compute_s_n(10)
-print(result)
-```
-
-
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, error = TRUE) # when you knit for submitting, change eval = FALSE to TRUE
 ```
 
-## R Markdown
+## Collaboration Policy
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+You may discuss the homework with others, but we ask that you write your solutions individually. If you do discuss the assignments with others, please include their names.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+**Collaborators:** *list collaborators here*
 
-```{r cars}
-summary(cars)
+
+## Due Date: Friday, 11:59 PM 1/16/2026 onto Gradescope
+
+
+## Objectives:
+
+The goal of this assignment is to practice basic tidyverse syntax and become comfortable with the tidy workflow.
+By completing this homework, you will learn to:
+
+- Read and inspect data in R.
+- Use `select()`, `filter()`, and `arrange()`
+- Create new variables with `mutate()`
+- Compute summaries with `summarise()` and `group_by()`
+- Create a basic plot using `ggplot2`
+
+---
+
+## Instructions:
+
+- Put all of your answers directly in this file.
+- Write R code only in code chunks unless otherwise stated.
+- Do not use loops.
+- Create the object requested in the question. Print **the final object** or **value**.
+- Knit your final submission to **pdf** and submit to Gradescope.
+
+
+---
+
+## Question 0: Preparing the Data
+
+Load the `tidyverse` package. Create a tibble named `cars` from the built-in dataset `mtcars` with the following requirements:
+
+- Row names stored in a column named `model`
+- Variables `cyl` and `gear` converted to factors
+- Variable `am` converted to a factor with labels `"automatic"` and `"manual"`
+
+**Required output:**
+
+- Print the entire cars tibble
+
+
+```{r}
+# Your Code Here
+#install.packages("tidyverse")
+library(tidyverse)
+cars = as_tibble(mtcars, rownames = "model")
+
+cars <- cars %>%
+  mutate(
+    cyl = as.factor(cyl),
+    gear = as.factor(gear),
+    am = factor(am, labels = c("automatic", "manual"))
+  )
+cars
 ```
 
-## Including Plots
+## Question 1: Inspecting the Dataset
 
-You can also embed plots, for example:
+### Question 1a
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+Perform the following tasks:
+1. Display the first 6 rows of cars
+2. Display the number of rows and columns
+3. Display the variable names
+
+
+```{r}
+# Your Code Here
+head(cars, 6)
+dim(cars)
+names(cars)
+
+```
+## Question 2: Selecting, Filtering, and Arranging
+
+### Question 2a
+
+Create a data frame named cars_small that contains only the variables:
+
+- `model`, `mpg`, `hp`, `wt`, `cyl`, `gear`, `am`
+
+**Required output:**
+
+- Print `cars_small`
+
+```{r}
+# Your Code Here
+cars_small <- cars %>%
+  select(model, mpg, hp, wt, cyl, gear, am)
+
+cars_small
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Question 2b
+
+Create a data frame named `cars_v8` that contains only cars with 8 cylinders.
+
+**Required output:**
+
+- Print `cars_v8`
+- Print the number of rows in `cars_v8`
+
+```{r}
+# Your Code Here
+cars_v8 <- cars %>%
+  filter(cyl == "8")
+cars_v8
+nrow(cars_v8)
+```
+
+
+### Question 2c
+
+Create a data frame named `cars_mpg_top5` that contains the top 5 cars with the highest mpg.
+
+**Required output:**
+
+- Print `cars_mpg_top5`
+
+```{r}
+# Your Code Here
+cars_mpg_top5 <- cars %>%
+  arrange(desc(mpg)) %>%
+  head(5)
+cars_mpg_top5
+```
+
+## Question 3: Creating New Variables
+
+### Question 3a
+
+Create a data frame named `cars_ratio` by adding a new variable named `hp_per_wt`, defined as horsepower divided by weight.
+
+
+**Required output:**
+
+- Print the top 5 rows of `cars_ratio` with the largest values of `hp_per_wt`
+- Show only `model`, `hp`, `wt`, and `hp_per_wt`
+
+```{r}
+# Your Code Here
+cars_radio <- cars %>%
+  mutate(hp_per_wt = hp/wt) %>%
+  arrange(desc(hp_per_wt))
+
+head(cars_radio,5)
+
+```
+
+
+### Question 3b
+
+Add a logical variable named `high_mpg` that is `TRUE` if `mpg $\geq$ 25` and `FALSE` otherwise.
+
+**Required output:**
+
+- Print the number of cars with `high_mpg = TRUE`
+
+```{r}
+# Your Code Here
+
+
+cars <- cars %>%
+  mutate(high_mpg = mpg >= 25) %>%
+  filter(high_mpg == TRUE) %>%
+  nrow()
+
+cars
+
+```
+## Question 4: Summary Statistics
+
+### Question 4a
+
+Using `cars_small`, compute the following summary statistics and store them in an object named `overall_summary`:
+
+- Mean mpg
+- Median horsepower
+- Minimum weight
+- Maximum weight
+
+**Required output:**
+
+- Print `overall_summary`
+
+```{r}
+# Your Code Here
+cars_small <- cars_small %>%
+  summarise(
+    mean_mpg = mean(mpg, na.rm = TRUE),
+    median_horsepower = median(hp, na.rm = TRUE),
+    minimum_weight = min(wt, na.rm = TRUE),
+    maximum_weight = max(wt, na.rm = TRUE)
+  )
+
+overall_summary <- cars_small
+
+overall_summary
+```
+
+## Question 5: Grouped Summaries
+
+### Question 5a
+
+For each number of cylinders (`cyl`), compute and store in `mpg_by_cyl`:
+
+- Number of cars
+- Mean mpg
+- Standard deviation of mpg
+
+**Required output:**
+
+- Print `mpg_by_cyl`
+
+```{r}
+# Your Code Here
+mpg_by_cyl <- cars %>%
+  group_by(cyl) %>%
+  summarise(
+    num_cars = n(),
+    mean_mpg = mean(mpg, na.rm = TRUE),
+    sd_mpg = sd(mpg, na.rm = TRUE)
+  )
+mpg_by_cyl
+```
+
+
+### Question 5b
+
+For each combination of cylinders (`cyl`) and transmission type (`am`), compute and store in `hp_by_cyl_am`:
+
+- Number of cars
+- Mean horsepower
+
+Arrange the results so that within each `cyl`, the row with the larger mean horsepower appears first.
+
+**Required output:**
+
+- Print `hp_by_cyl_am`
+
+```{r}
+# Your Code Here
+hp_by_cyl_am <- cars %>%
+  group_by(cyl, am) %>%
+  summarise(
+    num_cars = n(),
+    mean_hp = mean(hp)
+  )
+hp_by_cyl_am
+
+```
+
+## Question 6: Visualization
+
+Create a scatterplot of mpg versus weight:
+- x-axis: weight
+- y-axis: mpg
+- color: number of cylinders
+
+**Required output:**
+
+- A rendered plot
+
+```{r}
+# Your Code Here
+#install.packages("ggplot2")
+library(ggplot2)
+
+
+ggplot(cars) + 
+  geom_point(aes(x = wt, y = mpg, col = cyl))+
+  labs(
+    title = "mpg vs. weight",
+    x = "weight of the cars"
+  )
+  theme_minimal()
+
+
+```
+
+
+## Question 3: 7: Interpretation
+
+In 1–2 sentences, describe one pattern you observe in the plot from Question 6.
+
+**Answer:**
+
+# there is an inverse relationship between mpg and the weight of the cars. In other words, different colors of cylinders show that the cars with fewer cylinders tend to have lower weight and high mpg.
+
+---
+
+## Congratulations! You have finished Homework 1 !!!
+
+### Submission Instruction
+1. Submit the pdf document from this r markdown file onto Gradescope.
+2. Assign pages to corresponding questions when you submit your pdf onto Gradescope.
+
+
