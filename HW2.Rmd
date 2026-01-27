@@ -1,153 +1,566 @@
 ---
-title: "HW2"
-author: "Mida"
-date: "`r Sys.Date()`"
+title: "STA 35B Homework 2: Real Data Cleaning I (IMDb)"
+author: "Your Name"
+date: "2026-01-23"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE) # when you knit for submitting, change eval = FALSE to TRUE
 ```
 
-## R Markdown
+# Before You Start
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+You will use **sampled IMDb datasets** provided on Canvas.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Load the following files into R:
 
-##HW2-1
+- `title.basics.csv`
+- `title.crew.csv`
+
+> **Important rule for this homework:**  
+> Work with each dataset **separately**.  
+> **Do NOT join, merge, or combine datasets in any way.**  
+> Joins will be introduced in Homework 3.
+
+All requested outputs must be printed.  
+Written answers are required where specified.
+
+---
+
+# Question 0: Load and Inspect the Data
+
+## 0a. Reading the data
+Load the datasets:
+
+- `title.basics.csv` as `basics`
+- `title.crew.csv` as `crew`
 
 ```{r}
-install.packages("dplyr")
-install.packages("dslabs")
-library(dplyr)
-library(dslabs)
-data(murders)
-dim(murders)
-str(murders)
-murders <- cbind(murders, rate = (murders$total/murders$population)*100000)
-murders <- cbind(murders, rank = rank(-murders$rate))
-str(murders)
-print(murders$state)
-print(murders$abb)
-top_5 <- head(murders[order(murders$rank),],5)
-print(top_5)
-no_south <- subset(murders, region != "South")
-dim(no_south)
-murders_nw <- subset(murders,region %in% c("Northeast", "West"))
-dim(murders_nw)
-str(murders_nw)
-my_states <- murders_nw[murders_nw$rate < 1,]
-print(my_states[,c("state","rate","rank")])
-data(murders)
-my_states2 <- murders_nw %>%
-  filter(rate < 1) %>%
-  select(state,rate,rank)
-print(my_states2)
+# Write your code
+basics <- read.csv("title.basics.csv")
+crew <- read.csv("title.crew.csv")
+
+library(tidyverse)
+glimpse(basics)
+glimpse(crew)
 ```
-##HW2-2
+
+## 0b. Rename the identifier
+Rename the title identifier column to `tid` in **each dataset separately**.
+
+Print the first 6 rows of each updated data frame.
 
 ```{r}
-#install.packages("NHANES")
-#install.packages("dplyr")
-library(dplyr)
-library(NHANES)
-data(NHANES)
-data(BPSysAve)
-str(NHANES) #Age variable contains the age information, and they in in <int> type
-NHANES_my <- NHANES %>%
-  filter(Age >= 20 & Age <= 29 & Gender == "female")
-print(NHANES_my)
-ref <- NHANES_my %>%
-  summarise(
-    mean_b <- mean(BPSysAve, na.rm = TRUE),
-    sd_b <- sd(BPSysAve, na.rm = TRUE)
+# Your Code Here
+basics <- basics %>%
+  rename(tid = "title.identifier")
+
+basics1 <- basics %>% head(6)
+
+basics1
+
+crew <- crew %>%
+  rename(tid = "title.identifier")
+
+crew1 <- crew %>% head(6)
+
+crew1
+```
+
+## 0c. Basic checks 
+1. Is `tid` unique in `basics`?
+2. Is `tid` unique in `crew`?
+3. Report the number of rows in each dataset.
+
+```{r}
+# Your Code Here
+n_distinct(basics$tid) == nrow(basics)
+n_distinct(crew$tid) == nrow(crew)
+
+nrow(basics)
+nrow(crew)
+```
+
+---
+
+# Question 1: dplyr Foundations on `basics`
+
+## 1a. Unit of observation
+In 1–2 sentences, describe what **one row** in the `basics` dataset represents.
+
+*Written answer:*
+Each row in basics dataset represents different data information of different works in specific titles, such as primary title and original title.
+
+## 1b. Title types
+Using **only `basics`**, create a table named `type_counts` showing each `titleType`
+and its count, sorted from most frequent to least frequent.
+
+```{r}
+# Your Code Here
+type_counts <- basics %>%
+  count(titleType, name = "count") %>%
+  arrange(desc(count))
+
+type_counts
+```
+
+## 1c. Filtering to movies
+Create a dataset `movies_raw` containing only titles with "movie".
+
+Print:
+
+1. The number of rows in `movies_raw`
+2. The first 5 movie titles (`tid`, `primaryTitle`, `startYear`)
+
+```{r}
+# Your Code Here
+movies_raw <- basics %>%
+  filter(titleType == "movie")
+
+print(nrow(movies_raw))
+
+movies_raw %>%
+  select("tid", "primaryTitle", "startYear") %>%
+  head(5)
+
+```
+
+---
+
+# Question 2: Strings I — Cleaning Titles
+
+## 2a. Standardizing title text
+From `movies_raw`, create `movies_titles` by adding:
+
+- `primaryTitle_clean`: trimmed whitespace and converted to lowercase
+- `originalTitle_clean`: trimmed whitespace and converted to lowercase
+
+Print the first 10 rows showing:
+`tid`, `primaryTitle`, `primaryTitle_clean`,
+`originalTitle`, `originalTitle_clean`.
+
+```{r}
+# Your Code Here
+movies_titles <- movies_raw %>%
+  mutate(
+    primaryTitle_clean = str_trim(primaryTitle),
+    primaryTitle_clean = str_to_lower(primaryTitle_clean),
+    
+    originalTitle_clean = str_trim(originalTitle),
+    originalTitle_clean = str_to_lower(originalTitle_clean)
   )
-print(ref) #so mean value is 108 and standard deviation is 10.1
-class(ref)
+movies_titles %>%
+  select(tid, primaryTitle, primaryTitle_clean, originalTitle, originalTitle_clean) %>%
+  head(10)
+```
 
-ref_avg <- NHANES %>%
-  filter(Age >= 20 & Age <= 29 & Gender == "female") %>%
-  summarise(mean_b = mean(BPSysAve, na.rm = TRUE))%>%
-  pull(mean_b)
-print(ref_avg)
-class(ref_avg) # the type is numeric
+## 2b. Title length
+Add a variable `title_length` equal to the number of characters
+in `primaryTitle_clean`.
 
+Print the 10 movies with the **largest** `title_length`.
 
-ref_min_n_max <- NHANES_my %>%
-  summarise(
-    min_b = min(BPSysAve, na.rm = TRUE),
-    max_b = max(BPSysAve, na.rm = TRUE)
+```{r}
+# Your Code Here
+movies_titles <- movies_titles %>%
+  mutate(title_length = str_length(primaryTitle_clean)) %>%
+  arrange(desc(title_length))
+
+movies_titles %>%
+  head(10)
+
+movies_titles
+```
+
+---
+
+# Question 3: Regex — Pattern Detection and Extraction
+
+## 3a. Detecting punctuation
+Create a logical variable `has_punct` that is TRUE if `primaryTitle`
+contains **any punctuation**, and FALSE otherwise.
+
+Print:
+
+1. The number of movies with `has_punct == TRUE`
+2. Five example titles that contain punctuation
+
+```{r}
+# Your Code Here
+movies_titles <- movies_titles %>%
+  mutate(has_punct = str_detect(primaryTitle, "[[:punct:]]"))
+
+movie_punct <- sum(movies_titles$has_punct, na.rm = TRUE)
+movie_punct
+
+movies_titles %>%
+  filter(has_punct == TRUE) %>%
+  slice_sample(n = 5)
+
+```
+
+## 3b. Detecting leading articles
+Create a logical variable `starts_with_article` that is TRUE if
+`primaryTitle_clean` begins with **"a "**, **"an "**, or **"the "**.
+
+Report the proportion (as a decimal) of movies that start with an article.
+
+```{r}
+# Your Code Here
+movies_titles <- movies_titles %>%
+  mutate(
+    starts_with_articles = str_starts(
+      primaryTitle_clean, 
+      pattern = regex("^(a|an|the)")
+    )
   )
-print(ref_min_n_max)
 
-ref_age <- NHANES %>%
-  filter(Gender == "female") %>%
-  group_by(Age)%>%
+num_with_article <- sum(movies_titles$starts_with_article)
+total_movies <- nrow(movies_titles)
+
+proportion <- num_with_article/total_movies
+print(round(proportion,3))
+
+```
+
+## 3c. Extract numeric patterns from titles
+Create a variable `number_in_title` that extracts the **first sequence of digits**
+from `primaryTitle` (e.g., `"District 9" -> "9"`, `"Apollo 13" -> "13"`).
+If there is no digit sequence, set it to `NA`.
+
+Print:
+
+1. The number of movies with a non-missing `number_in_title`
+2. Eight example rows showing `primaryTitle` and `number_in_title`
+
+```{r}
+# Your Code Here
+movies_titles <- movies_titles %>%
+  mutate(number_in_title = str_extract(primaryTitle, "\\d+"))
+
+movies_titles %>%
   summarise(
-    mean_age = mean(BPSysAve, na.rm = TRUE),
-    sd_age = sd(BPSysAve, na.rm = TRUE)
+    sum(!is.na(number_in_title))
   )
-print(ref_age)
 
-ref_age_male <- NHANES %>%
-  filter(Gender == "male") %>%
-  group_by(Age)%>%
-  summarise(
-    mean_age = mean(BPSysAve, na.rm = TRUE),
-    sd_age = sd(BPSysAve, na.rm = TRUE)
+movies_titles %>%
+  select(primaryTitle, number_in_title) %>%
+  filter(!is.na(number_in_title)) %>%
+  head(8)
+```
+
+
+---
+
+# Question 4: Factors — Genres as a Categorical Variable
+
+The `genres` column may contain multiple genres separated by commas.
+
+## 4a. Creating a primary genre
+From `movies_titles`, create `movies_genre` by adding:
+
+- `genres_clean`: replace invalid placeholders (such as `\\N`) with `NA`
+- `primary_genre`: the first genre listed (before the first comma);
+  set to `NA` if `genres_clean` is missing
+
+Print the first 10 rows showing:
+`tid`, `primaryTitle`, `genres`, `primary_genre`.
+
+```{r}
+# Your Code Here
+movies_genre <- movies_titles %>%
+  mutate(
+    genres_clean = na_if(genres, "\\N"),
+    
+    primary_genre = if_else(
+      is.na(genres_clean),
+      NA,
+      str_extract(genres_clean, "^[^,]+")
+    )
   )
-print(ref_age_male)
 
-summary_table <- NHANES %>%
-  group_by(Gender, Age) %>%
-  summarise(
-    mean_b = mean(BPSysAve, na.rm = TRUE),
-    sd_b = sd(BPSysAve, na.rm = TRUE)
-  )
-print(summary_table)
+movies_genre %>%
+  select(tid, primaryTitle, genres, primary_genre) %>%
+  head(10)
+```
 
-result <- NHANES %>%
-  filter(Age >= 40 & Age <= 49 & Gender == "male") %>%
-  group_by(Race1) %>%
-  summarise(
-    mean_b = mean(BPSysAve, na.rm = TRUE)
+## 4b. Factors and reordering
+Convert `primary_genre` into a factor and reorder its levels
+by frequency (most common first).
+
+Print:
+
+1. A table of the top 10 most common `primary_genre` values with counts
+2. The factor levels
+
+```{r}
+# Your Code Here
+library(forcats)
+
+movies_genre <- movies_genre %>%
+  mutate(
+    primary_genre = as.factor(primary_genre),
+    primary_genre = fct_reorder(
+      primary_genre,
+      primary_genre,
+      .fun = n_distinct,
+      .desc = TRUE
+    )
   ) %>%
-  arrange(mean_b)
+  count(primary_genre, name = "count")
 
-print(result)
-```
-##HW2-3
+movies_genre %>%
+  arrange(desc(count)) %>%
+  head(10)
 
-
-```{r cars}
-#install.packages("dplyr")
-#install.packages("dslabs")
-library(dplyr)
-library(dslabs)
-data(murders)
-gdp = read.csv("/Users/limingda/Desktop/STA 001/bea-gdp-by-state.csv")
-str(murders)
-str(gdp)
-murders_GDP <- murders %>%
-  left_join(gdp, by = c("state"="Area"))
-dim(gdp)
-dim(murders_GDP) #the number is as I expected because there are 51 ares in the US
-
-murders_GDP <- murders_GDP %>%
-  left_join(gdp %>% filter(X2017 > 0)) %>%
-  mutate(murders_rate = (total*100000)/population)
-
-
-plot(murders_GDP$X2017, murders_GDP$murders_rate)
+levels(movies_genre$primary_genre) %>%
+  print()
 ```
 
-## Including Plots
+## 4c. Visualization
+Create a bar plot of the **top 10 primary genres** among movies.
 
-You can also embed plots, for example:
+Include an informative title and labeled axes.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+*Written answer (1–2 sentences):*
+
+```{r}
+# Your Code Here
+ggplot(movies_genre, aes(x = primary_genre, y = count)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Most Common Primary Genres in Movies",
+    x = "Primary Genre",
+    y = "Number of Movies"
+  ) +
+  theme_minimal()
+
+# It shows that drama is obviously the most popular primary genre, and war is the least popular one. There are also a large amount of movies that don't have its primary genres written out.
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+---
+
+# Question 5: Time — Valid Start Years and Decades
+*(No joins; use only `basics`-derived data)*
+
+## 5a. Cleaning the start year
+From `movies_genre`, create `movies_time` by adding:
+
+- `start_yr`: a numeric year if `startYear` is a valid 4-digit year;
+  otherwise `NA`
+
+Print:
+
+1. The number of movies with missing `start_yr`
+2. The minimum and maximum values of `start_yr` (ignoring missing values)
+
+```{r}
+# Your Code Here
+movies_time <- movies_titles %>%
+  mutate(
+    start_yr = if_else(
+      str_detect(startYear, "^\\d{4}$"),
+      as.numeric(startYear),
+      NA
+    )
+  )
+
+print(sum(is.na(movies_time$start_yr)))
+
+yr_min <- min(movies_time$start_yr, na.rm = TRUE)
+yr_max <- max(movies_time$start_yr, na.rm = TRUE)
+
+yr_min
+yr_max
+```
+
+## 5b. Movies per year
+Using only movies with non-missing `start_yr`, create a table showing:
+
+- `start_yr`
+- number of movies released in that year
+
+Sort the table in descending order of counts and print the top 10 rows.
+
+```{r}
+# Your Code Here
+movies_year <- movies_time %>%
+  filter(!is.na(start_yr)) %>%
+  count(start_yr, name = "count") %>%
+  arrange(desc(count)) %>%
+  head(10)
+
+movies_year
+```
+
+## 5c. Decade summaries
+Create a variable `decade` such that:
+
+- 1990 represents 1990–1999,
+- 2000 represents 2000–2009, etc.
+
+Create a table that reports, for each decade:
+
+- total number of movies
+- the most common primary genre
+
+Print the table sorted by decade.
+
+```{r}
+# Your Code Here
+movies_time <- movies_time %>%
+  mutate(
+    decade = case_when(
+      is.na(start_yr) ~ NA_real_,
+      start_yr >= 1880 & start_yr < 1890 ~ 1880,
+      start_yr >= 1890 & start_yr < 1900 ~ 1890,
+      start_yr >= 1900 & start_yr < 1910 ~ 1900,
+      start_yr >= 1910 & start_yr < 1920 ~ 1910,
+      start_yr >= 1920 & start_yr < 1930 ~ 1920,
+      start_yr >= 1930 & start_yr < 1940 ~ 1930,
+      start_yr >= 1940 & start_yr < 1950 ~ 1940,
+      start_yr >= 1950 & start_yr < 1960 ~ 1950,
+      start_yr >= 1960 & start_yr < 1970 ~ 1960,
+      start_yr >= 1970 & start_yr < 1980 ~ 1970,
+      start_yr >= 1980 & start_yr < 1990 ~ 1980,
+      start_yr >= 1990 & start_yr < 2000 ~ 1990,
+      start_yr >= 2000 & start_yr < 2010 ~ 2000,
+      start_yr >= 2010 & start_yr < 2020 ~ 2010,
+      start_yr >= 2020 & start_yr < 2030 ~ 2020,
+      TRUE ~ NA_real_
+    )
+  )
+
+decade_table <- movies_time %>%
+  group_by(decade) %>%
+  mutate(
+    genres_clean = na_if(genres, "\\N"),
+    
+    primary_genre = if_else(
+      is.na(genres_clean),
+      NA,
+      str_extract(genres_clean, "^[^,]+")
+    ),
+    primary_genre = as.factor(primary_genre),
+    primary_genre = fct_reorder(
+      primary_genre,
+      primary_genre,
+      .fun = n_distinct,
+      .desc = TRUE
+    )
+  ) %>%
+  count(primary_genre, name = "count")
+decade_table <- decade_table %>%
+  summarise(
+    total_movies = n(),
+    most_common_genre = primary_genre[which.max(table(primary_genre))]
+  ) %>%
+  arrange(decade)
+
+decade_table
+```
+
+## 5d. Visualization
+Create a plot showing the number of movies released per decade.
+
+*Written answer (1–2 sentences):* The number of movies released are increasing as the time has passed, from less than 5 in the 1910s to more than 10 in the 2020s
+
+```{r}
+# Your Code Here
+ggplot(decade_table, aes(x = as.factor(decade), y = total_movies)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Number of Movies Released per Decade",
+    x = "Decade",
+    y = "Number of Movies"
+  ) +
+  theme_minimal()
+```
+
+---
+
+# Question 6: Crew Table — Strings and Counting
+*(Work only within `crew`; do NOT combine with `basics`)*
+
+## 6a. Inspecting the data
+Print the first 6 rows of the `crew` dataset.
+
+```{r}
+# Your Code Here
+crew %>%
+  head(6)
+```
+
+## 6b. Counting directors and writers
+Create a dataset `crew_counts` by adding:
+
+- `num_directors`: number of director IDs listed
+- `num_writers`: number of writer IDs listed
+
+Rules:
+
+- If the entry is missing or equals `\\N`, set the count to `NA`
+- Otherwise, count the number of comma-separated IDs
+
+Print:
+
+1. The maximum value of `num_directors`
+2. The maximum value of `num_writers`
+3. The top 10 titles with the largest `num_directors`
+
+```{r}
+# Your Code Here
+crew_counts <- crew %>%
+  mutate(
+    num_directors = case_when(
+      is.na(directors) | directors == "\\N" ~ NA_real_,
+      TRUE ~ str_count(directors, ",") + 1L
+    ),
+    num_writers = case_when(
+      is.na(writers) | writers == "\\N" ~ NA_real_,
+      TRUE ~ str_count(writers, ",") + 1L
+    )
+  )
+
+max_directors <- max(crew_counts$num_directors, na.rm = TRUE)
+max_directors
+
+max_writers <- max(crew_counts$num_writers, na.rm = TRUE)
+max_writers
+
+```
+
+## 6c. Visualization
+Create two plots:
+
+1. Distribution of `num_directors`
+2. Distribution of `num_writers`
+
+*Written answer (1–2 sentences):* both of the distribution are highly right-skewed since most of the titles only have one or two directors and writers.
+
+```{r}
+# Your Code Here
+ggplot(crew_counts, aes(x = num_directors)) +
+  geom_histogram() +
+  labs(
+    title = "Distribution of Number of Directors",
+    x = "Number of Directors",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+ggplot(crew_counts, aes(x = num_writers)) +
+  geom_histogram() +
+  labs(
+    title = "Distribution of Number of Writers",
+    x = "Number of Writers",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+---
+
+Submit your pdf to Gradescope and assign corresponding pages to each questions.
