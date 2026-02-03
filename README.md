@@ -17,3 +17,5 @@ I am learning probability recently, and the 6th assignments are all about decidi
 The 7th assignmnet is about null hypothesis and alternate hypothesis, and it asks us to compare the p-value to the significance level and to see whether the evidence is enough for supporting the claim.
 
 In 2026 spring quarter, I practiced and reviewed the codes I learnt last year, such as codes that deal with data frames or tibbles in tidyverse and all graph visualization methods in ggplots2. There are also many new codes that still need to be handled, such as rename, count, and those join's functions.
+
+In the third example, I mainly practiced the use of join function and when to use if else or case_when. The other parts are the same as usual, practicing tidyverse package like dplyr and ggplots2.
