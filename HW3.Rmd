@@ -1,325 +1,417 @@
 ---
-title: "HW3"
-author: "Mida"
-date: "`r Sys.Date()`"
+title: "STA 35B Homework 3: Relational Data Analysis (IMDb)"
+author: "Your Name"
+date: "2026-1-30"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE) # when you knit for submitting, change eval = FALSE to TRUE
 ```
 
-##HW3-1
+# Before You Start
 
+You will use IMDb datasets provided on Canvas.
 
+Load the following files into R:
+
+- `title.basics.csv` (sampled)
+- `title.akas.csv` (sampled)
+- `title.crew.csv` (sampled)
+- `title.ratings.tsv` (full dataset)
+
+> **Important rule for this homework:**  
+> This homework **requires joins**.  
+> Rename the title identifier column to `tid` in **each dataset** at the start.
+
+All requested outputs must be printed.  
+Written answers are required where specified.
+
+---
+
+# Question 0: Load and Prepare the Data
+
+## 0a. Reading the data
+Load the datasets and name them exactly:
+
+- `title.basics.csv`  -> `basics`
+- `title.akas.csv`    -> `akas`
+- `title.crew.csv`    -> `crew`
+- `title.ratings.tsv` -> `ratings`
+
+Display the structure of each dataset.
 
 ```{r}
-
-gapminder<-readRDS("gapminder.rds")
+# Your Code Here
+library(tidyverse)
+basics <- read.csv("title.basics.csv")
+akas <- read.csv("title.akas.csv")
+crew <- read.csv("title.crew.csv")
+ratings <- read_tsv("title.ratings.tsv")
 ```
 
+## 0b. Rename the identifier
+Rename the title identifier column to `tid` in **each dataset**.
+
+Print the first 6 rows of each updated data frame.
 
 ```{r}
-library(ggplot2)
-library(dplyr)
-library(ggsci) # selected colors templates for ggplot2
+# Your Code Here
 
-gapminder<-readRDS("gapminder.rds")
-data(gapminder)
-str(gapminder)
+basics <- basics %>%
+  rename(tid = "title.identifier")
 
-gapminder_1962 <- gapminder %>%
-  filter(year == 1962)
+head(basics, 6)
 
-gapminder_1962 %>%
-  ggplot(aes(x = fertility, y = life_expectancy, color = continent))+
-  geom_point(alpha = 0.4)+
-  facet_wrap(~continent)+ #group by continent
-  geom_smooth(method="loess",se = TRUE)+
-  labs(
-    title="fertility versus life expectancy",
-    x="fertility",
-    y="life expectancy",
-    color="continent"
-  )
 
-  theme_minimal()
+akas <- akas %>%
+  rename(tid = "titleId")
+
+head(akas, 6)
+
+crew <- crew %>%
+  rename(tid = "title.identifier")
+
+head(crew, 6)
+
+
+ratings <- ratings %>%
+  rename(tid = "tconst")
+
+head(ratings, 6)
+
+
 ```
 
+## 0c. Restrict ratings to sampled titles
+Keep only rows in `ratings` whose `tid` appears in `basics`.
 
-##HW3-2
+Print the number of rows in the filtered ratings dataset.
 
 ```{r}
-gapminder_1962_2012 <- gapminder %>%
-  filter(year %in% c(1962,2012))
+# Your Code Here
+filtered_ratings <- ratings %>%
+  semi_join(basics, by = "tid")
 
-ggplot(gapminder_1962_2012, aes(x = fertility, y = life_expectancy,
-                                color = continent))+
-  geom_point(alpha = 0.4) +
-  facet_wrap(~year)+
-  labs(title = "GDP per capita versus life expectancy: 1962 vs. 2012",
-       x = "fertility",
-       y = "life expectancy",
-       color = "continent"
-  )+
-  theme_minimal()
+nrow(filtered_ratings)
 ```
 
-##HW3-3
+---
+
+# Question 1: Movies and Ratings (One-to-One Join)
+
+## 1a. Restrict to movies
+Create `movies` by filtering `basics` to `titleType == "movie"`.
+
+Print the number of rows in `movies`.
 
 ```{r}
-gapminder_10year <- gapminder %>%
-  filter(year %in% c(1960,1970,1980,1990,2000,2010))
+# Your Code Here
+movies <- basics %>%
+  filter(titleType == "movie")
 
-ggplot(gapminder_10year, aes(x = fertility, y = life_expectancy,
-                             color = continent)) +
-  geom_point(alpha = 0.4) +
-  geom_smooth(method="loess",se = TRUE)+
-  facet_wrap(~ year) +
-  labs(title = "fertility vs. Life Expectancy for every 10 years from 1960",
-       x = "fertility",
-       y = "Life Expectancy",
-       color = "Continent") +
-  theme_minimal()
+nrow(movies)
 ```
 
-##HW3-4
+## 1b. Join ratings onto movies
+Create `movies_ratings` by **left-joining** the filtered ratings dataset onto `movies` using `tid`.
+
+Print:
+
+1. number of rows in `movies_ratings`
+2. number of missing `averageRating` values
+3. summary statistics of `averageRating` and `numVotes`
 
 ```{r}
-gapminder_1960_2010 <- gapminder %>%
-  filter(year %in% c(1960,2010)) %>%
-  select(country, year,fertility, life_expectancy)
+# Your Code Here
+movies_ratings <- movies %>%
+  left_join(filtered_ratings, by = "tid")
 
+nrow(movies_ratings)
+cat(sum(is.na(filtered_ratings$averageRating)))
+cat(summarise(filtered_ratings %>% select(averageRating, numVotes)))
 
-gapminder_change <- gapminder_1960_2010 %>%
-  group_by(country) %>%
+```
+
+## 1c. Interpretation
+In 2–4 sentences, explain why a **left join** is appropriate here and what missing ratings represent.
+
+*Written answer:*
+a left_join is appropriate here because we want to keep all data in data frame "movies" and joining any possible value from "filtered_ratings" data frame. This could help us make sure that all movies will be kept in the data frame and with possible NA values if some movies don't appear in "filtered_ratings" data frame.
+---
+
+# Question 2: International Title Coverage (One-to-Many)
+
+## 2a. Join movies with akas
+Create `movies_akas` by left-joining `akas` onto `movies` using `tid`.
+
+Print:
+
+1. number of rows in `movies_akas`
+2. number of distinct `tid` in `movies_akas`
+
+```{r}
+# Your Code Here
+movies_akas <- movies %>%
+  left_join(akas, by = "tid")
+
+nrow(movies_akas)
+n_distinct(movies_akas$tid)
+```
+
+## 2b. Summarize international coverage
+Using `akas`, create `akas_summary` with one row per `tid` containing:
+
+- `n_akas`: number of alternative titles
+- `n_regions`: number of distinct non-missing regions
+
+Print the first 10 rows of `akas_summary`.
+
+```{r}
+# Your Code Here
+akas_summary <- akas %>%
+  group_by(tid) %>%
   summarise(
-    fertility_1960 = fertility[year == 1960],  
-    fertility_2010 = fertility[year == 2010],  
-    life_exp_1960 = life_expectancy[year == 1960], 
-    life_exp_2010 = life_expectancy[year == 2010],  
-    fertility_change = fertility_2010 - fertility_1960,
-    life_exp_change = life_exp_2010 - life_exp_1960,
+    n_akas = n(),
+    n_regions = n_distinct(region, na.rm = TRUE)
   )
 
-fertility_changes1 <- gapminder_change %>%
-  arrange(fertility_change) %>%
-  head(5) 
-
-fertility_changes2 <- gapminder_change %>%
-  arrange(desc(fertility_change)) %>%
-  head(5) 
-
-life_exp_changes1 <- gapminder_change %>%
-  arrange(life_exp_change) %>%
-  head(5) 
-
-life_exp_changes2 <- gapminder_change %>%
-  arrange(desc(life_exp_change)) %>%
-  head(5) 
-
-print(fertility_changes1)
-print(fertility_changes2)
-print(life_exp_changes1)
-print(life_exp_changes2)
-# from the four print codes, Costa Rica is improving fertility the least; 
-# Niger is improving fertility the most; 
-# Haiti is improving life expectancy the least; 
-# China is improving the life expectancy the most.
-# As we can see from the graphs above, Europe is relatively constant,
-# but Africa is accelerated fast.
+head(akas_summary, 10)
 ```
-##HW3-5
+
+## 2c. Interpretation
+In 2–4 sentences, explain what `n_regions` measures and why summarization is necessary before analysis.
+
+*Written answer:*
+n_regions measures how many different regions are there in "akas" data frame. Having summarization before analysis is because it helps user to see the data more directly and clearly and help better analysis and evaluation of the data.
+---
+
+# Question 3: Crew Information and Data Completeness
+
+## 3a. Join crew data
+Left-join `crew` onto `movies` using `tid`.
+
+Create indicator variables:
+
+- `has_director`
+- `has_writer`
+
+Print the first 10 rows.
 
 ```{r}
-gapminder_his <- gapminder %>%
-  filter(year == 1962)
+# Your Code Here
+movies_crew <- movies %>%
+  left_join(crew, by = "tid") %>%
+  mutate(
+    has_director = !is.na(directors) & directors != "" & directors != "\\N",
+    has_writer = !is.na(writers) & writers != "" & writers != "\\N"
+  )
 
-ggplot(gapminder_his, aes(x = gdp/(population*365)))+
-  geom_histogram(color = "white", fill = "lightblue")+
-  labs(
-    title = "histogram of per person per day GDP for the year 1962",
-    x = "countries",
-    y = "per person per day GDP for the year 1962"
-    )+
-  theme_minimal()
+head(movies_crew, 10)
 ```
 
-##HW3-6
+## 3b. Crew completeness table
+Create a table counting movies in each category:
+
+- director only
+- writer only
+- both director and writer
+- neither
+
+Print the table.
 
 ```{r}
-gapminder_region <- gapminder %>%
-  filter(year == 1962) %>%
-  mutate(gdp_per_day = gdp / population / 365)
-  
-gapminder_medians <- gapminder_region %>%
-  group_by(region) %>%
-  summarise(median_gdp = median(gdp_per_day, na.rm = TRUE)) %>%
-  arrange(median_gdp)
+# Your Code Here
+movies_count <- movies_crew %>%
+  mutate(
+    movies_category = case_when(
+      has_director & !has_writer ~ "director only",
+      !has_director & has_writer ~ "writer only",
+      has_director & has_writer ~ "both director and writer",
+      !has_director & !has_writer ~ "neither"
+    )
+  ) %>%
+  count(movies_category, name = "count")
 
-gapminder_region$region <- factor(gapminder_region$region,
-                                  level = gapminder_medians$region)
+movies_count
 
-ggplot(gapminder_region, aes(x = region, y = gdp_per_day)) +
-  geom_boxplot(fill = "lightblue", color = "white") +
-  scale_y_continuous(trans = "log2")+
-  labs(
-    title = "GDP per erson per day by Region in 1962",
-    x = "Region",
-    y = "GDP per Person per Day"
-  ) +
-  theme_minimal()
-```
-##library
-```{r}
-#install.packages("dplyr")
-#install.packages("dslabs")
-#library(ggplot2)
-#library(dplyr)
-#library(ggsci)
+
 ```
 
+## 3c. Interpretation
+In 2–4 sentences, describe one pattern you observe in crew completeness.
 
+*Written answer:*
+Most of the movies have both directors and writers, and since there are two to three times more "director only" than "writer only", it shows a pattern that directors are generally more important and indispensable for movies than writers.
+---
 
-##HW3-7
+# Question 4: Coverage vs Ratings
+
+## 4a. Combine coverage and ratings
+Join `akas_summary` and `movies_ratings`.
+
+Print the first 10 rows showing `tid`, `n_regions`, `averageRating`, and `numVotes`.
 
 ```{r}
-gapminder_region <- gapminder_region %>%
-  mutate(group = case_when(
-    region %in% c("Western Europe", "Northern Europe", "Southern Europe", 
-                  "Northern America", "Australia and New Zealand") ~ "West",
-    region %in% c("Eastern Asia", "South-Eastern Asia") ~ "East Asia",
-    region %in% c("Caribbean", "Central America", 
-                  "South America") ~ "Latin America",
-    region %in% c("Eastern Africa", "Middle Africa", "Southern Africa",
-                  "Western Africa") ~ "Sub-Saharan",
-    TRUE ~ "Others"
-  ))
+# Your Code Here
+movies_with_akas <- movies_ratings %>%
+  left_join(akas_summary, by = "tid") %>%
+  mutate(n_regions = replace_na(n_regions, 0L))
 
 
-gapminder_region$group <- factor(gapminder_region$group, 
-                                 levels = c("Others", "Latin America",
-                                            "East Asia", "Sub-Saharan", "West"))
-
-by_group <- ggplot(gapminder_region, aes(x = group, y = gdp_per_day))+
-  geom_boxplot(fill = "lightblue",color = "white")+
-  geom_jitter()+
-  labs(
-    x = "group",
-    y = "GDP per day",
-    title = "group vs. GDP per day"
-  )+
-  theme_minimal()
-
-by_group # we can see that west group obviously has higher gdp per day
+movies_with_akas %>%
+  select(tid, n_regions, averageRating, numVotes) %>%
+  head(10)
 ```
 
-##HW3-8
+## 4b. Ratings by international coverage
+Create a summary table showing mean `averageRating` and median `numVotes`
+for movies grouped into the following `n_regions` categories:
+
+- 0 regions
+- 1 region
+- 2 or more regions
+
+Print the table.
 
 ```{r}
-#install.packages("ggridges")
-library(ggridges)
-ridge_plot <- ggplot(gapminder_region,aes(x = gdp_per_day, y = group))+
-  geom_density_ridges(jittered_points = TRUE)+
-  labs(
-    title = "GDP per day in different groups",
-    x = "GDP per day",
-    y = "Groups"
-  ) +
-  theme_minimal()
+# Your Code Here
+summary_region <- movies_with_akas %>%
+  mutate(
+    regions_category = case_when(
+      n_regions == 0 ~ "0 regions",
+      n_regions == 1 ~ "1 region",
+      n_regions >= 2 ~ "2 or more regions",
+      TRUE ~ "other"
+    )
+  ) %>%
+  group_by(regions_category) %>%
+  summarise(
+    averageRating_mean = mean(averageRating, na.rm = TRUE),
+    numVotes_median = median(numVotes, na.rm = TRUE)
+  )
 
-ridge_plot
+
+summary_region
+
 ```
-##HW3-9
+
+## 4c. Interpretation
+In 3–5 sentences, discuss the relationship between international coverage and ratings or popularity.
+
+*Written answer:*
+movies with 0 regions appear to have a slightly bigger mean value of averageRating and a much larger median value of numVotes than moveis which have 2 or more regions. This shows a broader spread of movies doesn't necessarily lead to a higher evaluation. However, the missing data for movies in 1 region make this view weaker to stand.
+---
+
+# Question 5: Pivot Table by Decade
+
+## 5a. Create decade
+Create a `decade` variable from `startYear`
+(e.g., 1990 represents 1990–1999).
 
 ```{r}
-gapminder_plot <- gapminder %>%
-  filter(year %in% seq(1960, 2010, by = 10)) %>%
-  mutate(gdp_per_day = gdp / population / 365) %>%
-  mutate(group = case_when(
-    region %in% c("Western Europe", "Northern Europe", "Southern Europe",
-                  "Northern America", "Australia and New Zealand") ~ "West",
-    region %in% c("Eastern Asia", "South-Eastern Asia") ~ "East Asia",
-    region %in% c("Caribbean", "Central America",
-                  "South America") ~ "Latin America",
-    region %in% c("Eastern Africa", "Middle Africa", "Southern Africa",
-                  "Western Africa") ~ "Sub-Saharan",
-    TRUE ~ "Others"
-  ))%>%
-  group_by(year, group)
-  
-
-str(gapminder_plot)
-
-ggplot(gapminder_plot, aes(x = group, y = gdp_per_day))+
-  geom_boxplot(fill = "lightblue", color = "white")+
-  facet_wrap(~ year, ncol = 2)+
-  labs(
-    x = "groups",
-    y = "GDP per day",
-    title = "GDP per day vs. groups"
-  )+
-  theme_minimal()
-
-ggplot(gapminder_plot,aes(x = gdp_per_day, y = group))+
-  geom_density_ridges(jittered_points = TRUE)+
-  facet_wrap(~ year, ncol = 2)
-  labs(
-    title = "GDP per day in different groups",
-    x = "GDP per day",
-    y = "Groups"
-  ) +
-  theme_minimal()
+# Your Code Here
+movies_time <- movies_ratings %>%
+  mutate(
+    decade = case_when(
+      startYear >= 1900 & startYear <= 1909 ~ "1900",
+      startYear >= 1910 & startYear <= 1919 ~ "1910",
+      startYear >= 1920 & startYear <= 1929 ~ "1920",
+      startYear >= 1930 & startYear <= 1939 ~ "1930",
+      startYear >= 1940 & startYear <= 1949 ~ "1940",
+      startYear >= 1950 & startYear <= 1959 ~ "1950",
+      startYear >= 1960 & startYear <= 1969 ~ "1960",
+      startYear >= 1970 & startYear <= 1979 ~ "1970",
+      startYear >= 1980 & startYear <= 1989 ~ "1980",
+      startYear >= 1990 & startYear <= 1999 ~ "1990",
+      startYear >= 2000 & startYear <= 2009 ~ "2000",
+      startYear >= 2010 & startYear <= 2019 ~ "2010",
+      startYear >= 2020 & startYear <= 2029 ~ "2020",
+      TRUE ~ NA_character_
+    )
+  )
 ```
-##HW3-10
+
+## 5b. Pivot ratings by decade
+Create a wide table with:
+
+- rows = decade
+- columns = rating category (`low` < 5, `mid` 5–<7, `high` >= 7)
+- values = movie counts
+
+Print the table.
 
 ```{r}
-baseline <- gapminder_plot %>% 
-  filter(year == 1960) %>% 
-  mutate(baseline_gdp = gdp_per_day) %>%
-  select(country, baseline_gdp, year)
+# Your Code Here
+movies_rate <- movies_time %>%
+  mutate(
+    rating_category = case_when(
+      averageRating < 5 ~ "low",
+      averageRating >= 5 & averageRating < 7 ~ "med",
+      averageRating >= 7 ~ "high",
+      TRUE ~ NA_character_
+    )
+  )
 
+wide_table <- movies_rate %>%
+  filter(!is.na(rating_category)) %>%
+  group_by(decade, rating_category) %>%
+  summarise(
+    count = n()
+    ) %>%
+  pivot_wider(
+    names_from = rating_category,
+    values_from = count
+  ) %>%
+  arrange(decade)
 
-increase <- gapminder_plot %>%
-  filter(year != 1960) %>%
-  left_join(baseline, by = "country") %>%
-  mutate(increase_percentage = 
-           ((gdp_per_day - baseline$baseline_gdp)/baseline$baseline_gdp) * 100)
+wide_table
+```
 
+## 5c. Interpretation
+In 2–4 sentences, describe one pattern you see across decades.
 
-ggplot(increase, aes(x = year.x, y = increase_percentage)) + 
-  geom_boxplot(fill = "lightblue", color = "white") + 
-  facet_wrap(~year.x)
-  labs(
-    x = "Year",
-    y = "Percent increase",
-    title = "Percent increase in GDP per day",
-    fill = "group"
-  ) + 
+*Written answer:*
+The average ratings shows a general increasing trend as time passes from 1910s to 2020s. The average ratings tend to be low before 1970, with only one high rating. However, the rating goes pu to a peak during 2010s, getting 19 high ratings. 
+---
+
+# Question 6: Visualization — Ratings and Coverage
+
+## 6a. Visualization
+Using `movies_ratings` and `akas_summary`, create ONE plot that shows
+the relationship between international coverage (`n_regions` category)
+and `averageRating`.
+
+You may use a boxplot or violin plot.
+
+```{r}
+# Your Code Here
+rating_region <- movies_ratings %>%
+  left_join(akas_summary, by = "tid") %>%
+  mutate(
+    regions_category = case_when(
+      n_regions == 0 ~ "0 regions",
+      n_regions == 1 ~ "1 region",
+      n_regions >= 2 ~ "2 or more regions",
+      TRUE ~ "other"
+    )
+  ) %>%
+  ggplot(aes(x = regions_category, y = averageRating))+
+  geom_boxplot()+
   theme_minimal()
+
+rating_region
 ```
 
+## 6b. Interpretation
+In 2–4 sentences, explain what the plot shows and how it complements the numerical summaries above.
 
+*Written answer:*
+The box plot shows the mean average rating for movies that don't have their region number is more than those more international movies. However, movies with 2 or more regions exhibit a wider interquartile range in the middle, showing that they are exposed to more diverse people.
+---
 
-
-
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# Submission Checklist
+- All questions answered in order
+- All required tables printed
+- One plot included for Question 6
+- Written responses included where requested
